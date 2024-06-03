@@ -1,5 +1,6 @@
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const express = require("express");
+const app = express();
 const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
@@ -7,17 +8,15 @@ const cookieParser = require("cookie-parser");
 
 const port = process.env.PORT || 8000;
 
-const app = express();
 const corsOptions = {
-  origin: ["http://localhost:5173/", "http://localhost:5174/"],
+  origin: ["http://localhost:5173", "http://localhost:5174"],
   credentials: true,
   optionSuccessStatus: 200,
 };
-
 app.use(cors(corsOptions));
 
 app.use(express.json());
-app.use(cookieParser);
+app.use(cookieParser());
 
 // verify token middleWare
 const verifyToken = async (req, res, next) => {
