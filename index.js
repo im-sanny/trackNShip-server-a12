@@ -47,6 +47,8 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+    const db = client.db('tracknship')
+    const bookParcelCollection = db.collection('bookParcel')
     // auth related api
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -76,6 +78,15 @@ async function run() {
         res.status(500).send(err);
       }
     });
+
+    // save book parcel data in db
+    app.post('/bookParcel', async (req, res)=>{
+      const bookParcelData = req.body
+      const result = await bookParcelCollection.insertOne(bookParcelData)
+      res.send(result)
+    })
+
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
