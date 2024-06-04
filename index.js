@@ -87,6 +87,12 @@ async function run() {
     });
 
     // all book parcel data which are submitted by the specific user
+    app.get("/myParcel/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = {"normalUser.email": email};
+      const result = await bookParcelCollection.find(query).toArray();
+      res.send(result);
+    });
     // app.get("/bookParcel/:email", verifyToken, async (req, res) => {
     //   const email = req.params.email;
     //   const query = { email };
@@ -95,10 +101,10 @@ async function run() {
     // });
     
     // get all pending assignment
-    app.get("/bookParcel-all", async (req, res) => {
-      const result = await bookParcelCollection.find().toArray();
-      res.send(result);
-    });
+    // app.get("/bookParcel-all", async (req, res) => {
+    //   const result = await bookParcelCollection.find().toArray();
+    //   res.send(result);
+    // });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
