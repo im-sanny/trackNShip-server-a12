@@ -47,8 +47,8 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    const db = client.db('tracknship')
-    const bookParcelCollection = db.collection('bookParcel')
+    const db = client.db("tracknship");
+    const bookParcelCollection = db.collection("bookParcel");
     // auth related api
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -80,12 +80,25 @@ async function run() {
     });
 
     // save book parcel data in db
-    app.post('/bookParcel', async (req, res)=>{
-      const bookParcelData = req.body
-      const result = await bookParcelCollection.insertOne(bookParcelData)
-      res.send(result)
-    })
+    app.post("/bookParcel", async (req, res) => {
+      const bookParcelData = req.body;
+      const result = await bookParcelCollection.insertOne(bookParcelData);
+      res.send(result);
+    });
 
+    // all book parcel data which are submitted by the specific user
+    // app.get("/bookParcel/:email", verifyToken, async (req, res) => {
+    //   const email = req.params.email;
+    //   const query = { email };
+    //   const result = await bookParcelCollection.find(query).toArray();
+    //   res.send(result);
+    // });
+    
+    // get all pending assignment
+    app.get("/bookParcel-all", async (req, res) => {
+      const result = await bookParcelCollection.find().toArray();
+      res.send(result);
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
