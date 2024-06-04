@@ -1,4 +1,4 @@
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const express = require("express");
 const app = express();
 const cors = require("cors");
@@ -89,7 +89,7 @@ async function run() {
     // all book parcel data which are submitted by the specific user
     app.get("/myParcel/:email", async (req, res) => {
       const email = req.params.email;
-      const query = {"normalUser.email": email};
+      const query = { "normalUser.email": email };
       const result = await bookParcelCollection.find(query).toArray();
       res.send(result);
     });
@@ -99,12 +99,23 @@ async function run() {
     //   const result = await bookParcelCollection.find(query).toArray();
     //   res.send(result);
     // });
-    
+
     // get all pending assignment
     // app.get("/bookParcel-all", async (req, res) => {
     //   const result = await bookParcelCollection.find().toArray();
     //   res.send(result);
     // });
+
+
+    // delete booking upon canceling the booking
+    app.delete("/cancelParcel/:id",  async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bookParcelCollection.deleteOne(query);
+      res.send(result);
+    });
+
+  
 
     await client.db("admin").command({ ping: 1 });
     console.log(
