@@ -100,22 +100,31 @@ async function run() {
     //   res.send(result);
     // });
 
-    // get all pending assignment
+    // get all pending booking
     // app.get("/bookParcel-all", async (req, res) => {
     //   const result = await bookParcelCollection.find().toArray();
     //   res.send(result);
     // });
 
-
     // delete booking upon canceling the booking
-    app.delete("/cancelParcel/:id",  async (req, res) => {
+    app.delete("/cancelParcel/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await bookParcelCollection.deleteOne(query);
       res.send(result);
     });
 
-  
+    // update a booking data
+    app.put("/updateParcel/update/:id", async (req, res) => {
+      const id = req.params.id;
+      const parcelData = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: parcelData,
+      };
+      const result = await bookParcelCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
