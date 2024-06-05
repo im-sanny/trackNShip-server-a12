@@ -87,8 +87,20 @@ async function run() {
 
       // check if user already exists in db
       const isExists = await usersCollection.findOne(query);
-      if (isExists) return res.send(isExists);
+      if (isExists) {
+        if (user.status === "Requested") {
+          // if existing user login again
+          const result = await usersCollection.updateOne(query, {
+            $set: { status: user?.status },
+          });
+          return res.send(result);
+        } else {
+          // if existing user login again
+          return res.send(isExists);
+        }
+      }
 
+      // save user for  first time
       const options = { upsert: true };
       const updateDoc = {
         $set: {
@@ -97,6 +109,12 @@ async function run() {
         },
       };
       const result = await usersCollection.updateOne(query, updateDoc, options);
+      res.send(result);
+    });
+
+    // get all user from db
+    app.get("/allUser", async (req, res) => {
+      const result = await usersCollection.find().toArray();
       res.send(result);
     });
 
@@ -114,6 +132,7 @@ async function run() {
       const result = await bookParcelCollection.find(query).toArray();
       res.send(result);
     });
+
     // app.get("/bookParcel/:email", verifyToken, async (req, res) => {
     //   const email = req.params.email;
     //   const query = { email };
