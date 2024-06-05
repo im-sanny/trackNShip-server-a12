@@ -49,6 +49,7 @@ async function run() {
   try {
     const db = client.db("tracknship");
     const bookParcelCollection = db.collection("bookParcel");
+    const usersCollection = db.collection("users");
     // auth related api
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -77,6 +78,26 @@ async function run() {
       } catch (err) {
         res.status(500).send(err);
       }
+    });
+
+    // save all user data in db
+    app.put("/user", async (req, res) => {
+      const user = req.body;
+      const query = { email: user?.email };
+
+      // check if user already exists in db
+      const isExists = await usersCollection.findOne(query);
+      if (isExists) return res.send(isExists);
+
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          ...user,
+          timeStamp: Date.now(),
+        },
+      };
+      const result = await usersCollection.updateOne(query, updateDoc, options);
+      res.send(result);
     });
 
     // save book parcel data in db
