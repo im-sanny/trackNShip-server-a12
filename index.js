@@ -114,8 +114,16 @@ async function run() {
       res.send(result);
     });
 
+    // get data of single id before update
+    app.get("/getUpdate/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bookParcelCollection.findOne(query);
+      res.send(result);
+    });
+
     // update a booking data
-    app.put("/updateParcel/update/:id", async (req, res) => {
+    app.patch("/getUpdate/:id", async (req, res) => {
       const id = req.params.id;
       const parcelData = req.body;
       const query = { _id: new ObjectId(id) };
