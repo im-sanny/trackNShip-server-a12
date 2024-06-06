@@ -180,6 +180,12 @@ async function run() {
       res.send(result);
     });
 
+    // get all parcel data from db
+    app.get("/allParcel", verifyToken, verifyAdmin, async (req, res) => {
+      const result = await bookParcelCollection.find().toArray();
+      res.send(result);
+    });
+
     // app.get("/bookParcel/:email", verifyToken, async (req, res) => {
     //   const email = req.params.email;
     //   const query = { email };
