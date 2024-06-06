@@ -106,6 +106,7 @@ async function run() {
         $set: {
           ...user,
           timeStamp: Date.now(),
+          number: user?.phoneNumber,
         },
       };
       const result = await usersCollection.updateOne(query, updateDoc, options);
@@ -120,8 +121,20 @@ async function run() {
     });
 
     // get all user from db
-    app.get("/allUser", async (req, res) => {
+    app.get("/user", async (req, res) => {
       const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+
+    // update a user role
+    app.patch("/user/update/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const query = { email };
+      const updateDoc = {
+        $set: { ...user, timeStamp: Date.now() },
+      };
+      const result = await usersCollection.updateOne(query, updateDoc);
       res.send(result);
     });
 
