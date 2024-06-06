@@ -64,6 +64,7 @@ async function run() {
         })
         .send({ success: true });
     });
+
     // Logout
     app.get("/logout", async (req, res) => {
       try {
@@ -79,6 +80,31 @@ async function run() {
         res.status(500).send(err);
       }
     });
+
+    // verify admin middleware
+    const verifyAdmin = async (req, res, next) => {
+      console.log("hello");
+      const user = req.user;
+      const query = { email: user?.email };
+      const result = await usersCollection.findOne(query);
+      console.log(result.role);
+      if (!result || result.role !== "admin") {
+        return res.status(401).send({ message: "unauthorized access!!" });
+      }
+      next();
+    };
+    // verify deliveryman middleware
+    const verifyDeliveryman = async (req, res, next) => {
+      console.log("hello");
+      const user = req.user;
+      const query = { email: user?.email };
+      const result = await usersCollection.findOne(query);
+      console.log(result.role);
+      if (!result || result.role !== "deliveryman") {
+        return res.status(401).send({ message: "forbidden access" });
+      }
+      next();
+    };
 
     // save all user data in db
     app.put("/user", async (req, res) => {
@@ -106,7 +132,8 @@ async function run() {
         $set: {
           ...user,
           timeStamp: Date.now(),
-          number: user?.phoneNumber,
+          number: user?.phone,
+          name: user?.name,
         },
       };
       const result = await usersCollection.updateOne(query, updateDoc, options);
@@ -121,7 +148,7 @@ async function run() {
     });
 
     // get all user from db
-    app.get("/user", async (req, res) => {
+    app.get("/user", verifyToken, verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
