@@ -50,6 +50,7 @@ async function run() {
     const db = client.db("tracknship");
     const bookParcelCollection = db.collection("bookParcel");
     const usersCollection = db.collection("users");
+    const deliveryCollection = db.collection('deliveryDB')
     // auth related api
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -207,6 +208,38 @@ async function run() {
       };
       const result = await bookParcelCollection.updateOne(query, updateDoc);
       res.send(result);
+    });
+
+    // Cancel Parcel
+    app.patch("/cancelParcel/:id", async (req, res) => {
+      const { id } = req.params;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: { status: "cancelled" },
+      };
+      try {
+        const result = await bookParcelCollection.updateOne(query, updateDoc);
+        res.send(result);
+      } catch (error) {
+        console.error("Error updating parcel status:", error);
+        res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
+
+    // Deliver Parcel
+    app.patch("/deliverParcel/:id", async (req, res) => {
+      const { id } = req.params;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: { status: "delivered" },
+      };
+      try {
+        const result = await bookParcelCollection.updateOne(query, updateDoc);
+        res.send(result);
+      } catch (error) {
+        console.error("Error updating parcel status:", error);
+        res.status(500).send({ message: "Internal Server Error" });
+      }
     });
 
     // delete booking upon canceling the booking
