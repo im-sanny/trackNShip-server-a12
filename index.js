@@ -50,7 +50,9 @@ async function run() {
     const db = client.db("tracknship");
     const bookParcelCollection = db.collection("bookParcel");
     const usersCollection = db.collection("users");
-    const deliveryCollection = db.collection('deliveryDB')
+    const deliveryCollection = db.collection("deliveryDB");
+    const reviewCollection = db.collection("reviews");
+
     // auth related api
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -219,6 +221,20 @@ async function run() {
       };
       try {
         const result = await bookParcelCollection.updateOne(query, updateDoc);
+        // Update status in deliveryDB if the parcel was assigned to a delivery man
+        if (result.modifiedCount === 1) {
+          const parcelData = await bookParcelCollection.findOne(query);
+          if (parcelData.deliveryManID) {
+            const deliveryManQuery = { _id: parcelData.deliveryManID };
+            const deliveryManUpdateDoc = {
+              $inc: { deliveredParcelCount: -1 }, // Reduce deliveredParcelCount by 1
+            };
+            await deliveryCollection.updateOne(
+              deliveryManQuery,
+              deliveryManUpdateDoc
+            );
+          }
+        }
         res.send(result);
       } catch (error) {
         console.error("Error updating parcel status:", error);
@@ -235,11 +251,32 @@ async function run() {
       };
       try {
         const result = await bookParcelCollection.updateOne(query, updateDoc);
+        // Update status in deliveryDB if the parcel was assigned to a delivery man
+        if (result.modifiedCount === 1) {
+          const parcelData = await bookParcelCollection.findOne(query);
+          if (parcelData.deliveryManID) {
+            const deliveryManQuery = { _id: parcelData.deliveryManID };
+            const deliveryManUpdateDoc = {
+              $inc: { deliveredParcelCount: 1 }, // Increase deliveredParcelCount by 1
+            };
+            await deliveryCollection.updateOne(
+              deliveryManQuery,
+              deliveryManUpdateDoc
+            );
+          }
+        }
         res.send(result);
       } catch (error) {
         console.error("Error updating parcel status:", error);
         res.status(500).send({ message: "Internal Server Error" });
       }
+    });
+
+    // save review data in db
+    app.post("/reviews", async (req, res) => {
+      const reviewData = req.body;
+      const result = await reviewCollection.insertOne(reviewData);
+      res.send(result);
     });
 
     // delete booking upon canceling the booking
