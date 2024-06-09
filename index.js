@@ -279,6 +279,28 @@ async function run() {
       res.send(result);
     });
 
+    // get all review
+    app.get("/reviews", async (req, res) => {
+      const result = await reviewCollection.find().toArray();
+      res.send(result);
+    });
+
+    // app.get("/reviews", async (req, res) => {
+    //   const deliveryManID = req.query.deliveryManID;
+    //   console.log("deliverymanId", deliveryManID);
+
+    //   if (!deliveryManID) {
+    //     return res.status(400).send({ error: "DeliveryManID is required" });
+    //   }
+
+    //   try {
+    //     const reviews = await reviewCollection.find({ deliveryManID }).toArray();
+    //     res.send(reviews);
+    //   } catch (error) {
+    //     res.status(500).send({ error: "An error occurred while fetching reviews" });
+    //   }
+    // });
+
     // delete booking upon canceling the booking
     app.delete("/cancelParcel/:id", async (req, res) => {
       const id = req.params.id;
