@@ -56,13 +56,14 @@ async function run() {
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: "365d",
       });
-      res
-        .cookie("token", token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-        })
-        .send({ success: true });
+      res.send({ token });
+
+      // .cookie("token", token, {
+      //   httpOnly: true,
+      //   secure: process.env.NODE_ENV === "production",
+      //   sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      // })
+      // .send({ success: true });
     });
 
     // Logout
@@ -132,8 +133,6 @@ async function run() {
         $set: {
           ...user,
           timeStamp: Date.now(),
-          number: user?.phone,
-          name: user?.name,
         },
       };
       const result = await usersCollection.updateOne(query, updateDoc, options);
@@ -148,7 +147,7 @@ async function run() {
     });
 
     // get all user from db
-    app.get("/user", verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/user", async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
@@ -180,24 +179,35 @@ async function run() {
       res.send(result);
     });
 
-    // get all parcel data from db
-    app.get("/allParcel", verifyToken, verifyAdmin, async (req, res) => {
-      const result = await bookParcelCollection.find().toArray();
+    // get all parcel data from db with optional date range
+    app.get("/allParcel", async (req, res) => {
+      const { startDate, endDate } = req.query;
+      let query = {};
+      if (startDate && endDate) {
+        query.requestedDeliveryDate = {
+          $gte: new Date(startDate),
+          $lte: new Date(endDate),
+        };
+      }
+      const result = await bookParcelCollection.find(query).toArray();
       res.send(result);
     });
 
-    // app.get("/bookParcel/:email", verifyToken, async (req, res) => {
-    //   const email = req.params.email;
-    //   const query = { email };
-    //   const result = await bookParcelCollection.find(query).toArray();
-    //   res.send(result);
-    // });
-
-    // get all pending booking
-    // app.get("/bookParcel-all", async (req, res) => {
-    //   const result = await bookParcelCollection.find().toArray();
-    //   res.send(result);
-    // });
+    // Update booking status and assign delivery man
+    app.post("/updateBooking/:id", async (req, res) => {
+      const id = req.params.id;
+      const { deliveryManID, approximateDeliveryDate } = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: "On The Way",
+          deliveryManID: new ObjectId(deliveryManID),
+          approximateDeliveryDate: new Date(approximateDeliveryDate),
+        },
+      };
+      const result = await bookParcelCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
 
     // delete booking upon canceling the booking
     app.delete("/cancelParcel/:id", async (req, res) => {
