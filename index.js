@@ -50,7 +50,7 @@ async function run() {
     const db = client.db("tracknship");
     const bookParcelCollection = db.collection("bookParcel");
     const usersCollection = db.collection("users");
-    const deliveryCollection = db.collection("deliveryDB");
+    // const deliveryCollection = db.collection("deliveryDB");
     const reviewCollection = db.collection("reviews");
 
     // auth related api
@@ -109,6 +109,44 @@ async function run() {
       }
       next();
     };
+
+    // Endpoint to fetch top delivery men
+    // app.get("/deliverymen", async (req, res) => {
+    //   try {
+    //     const deliveryCollection = db.collection("users"); // Assuming delivery men are stored in the "users" collection
+
+    //     // Fetch users with role "deliveryman" from the database
+    //     const deliveryMen = await deliveryCollection.find({ role: "deliveryman" }).toArray();
+
+    //     // Calculate the number of parcels delivered and average ratings for each delivery man
+    //     const deliveryMenData = await Promise.all(
+    //       deliveryMen.map(async (deliveryMan) => {
+    //         const { _id, name } = deliveryMan;
+    //         const parcelCount = await bookParcelCollection.countDocuments({ deliveryManID: _id });
+    //         const reviews = await reviewCollection.find({ deliveryManID: _id }).toArray();
+    //         const totalRating = reviews.reduce((acc, review) => acc + review.rating, 0);
+    //         const averageRating = reviews.length > 0 ? totalRating / reviews.length : 0;
+    //         return { _id, name, parcelCount, averageRating };
+    //       })
+    //     );
+
+    //     // Sort delivery men by the number of parcels delivered and average ratings
+    //     const topDeliveryMen = deliveryMenData
+    //       .sort((a, b) => {
+    //         if (a.parcelCount !== b.parcelCount) {
+    //           return b.parcelCount - a.parcelCount;
+    //         }
+    //         return b.averageRating - a.averageRating;
+    //       })
+    //       .slice(0, 3); // Get the top 3 delivery men
+
+    //     // Send the top delivery men data as response
+    //     res.json(topDeliveryMen);
+    //   } catch (error) {
+    //     console.error("Error fetching top delivery men:", error);
+    //     res.status(500).json({ error: "Internal Server Error" });
+    //   }
+    // });
 
     // save all user data in db
     app.put("/user", async (req, res) => {
