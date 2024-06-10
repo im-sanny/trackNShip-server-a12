@@ -4,32 +4,39 @@ const app = express();
 const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
-const cookieParser = require("cookie-parser");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const port = process.env.PORT || 8000;
 
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: [
+    "http://localhost:5173",
+    "https://tracknship22.web.app",
+    "http://localhost:5174",
+  ],
   credentials: true,
   optionSuccessStatus: 200,
 };
 app.use(cors(corsOptions));
 
 app.use(express.json());
-app.use(cookieParser());
 
-// verify token middleWare
+// verify token middleware
 const verifyToken = async (req, res, next) => {
-  const token = req.cookies?.token;
-  console.log(token);
-  if (!token) {
-    return res.status(401).send({ message: "unauthorized access" });
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send({ message: "unauthorized access ): " });
   }
+
+  const token = authHeader.split(" ")[1];
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access ): " });
+  }
+
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
     if (err) {
       console.log(err);
-      return res.status(401).send({ message: "unauthorized access" });
+      return res.status(401).send({ message: "unauthorized access ): " });
     }
     req.user = decoded;
     next();
@@ -51,47 +58,8 @@ async function run() {
     const db = client.db("tracknship");
     const bookParcelCollection = db.collection("bookParcel");
     const usersCollection = db.collection("users");
-    // const deliveryCollection = db.collection("deliveryDB");
     const reviewCollection = db.collection("reviews");
     const paymentCollection = db.collection("payments");
-
-    app.post("/create-payment-intent", async (req, res) => {
-      const { price } = req.body;
-      const amount = parseInt(price * 100);
-      console.log("Amount in cents:", amount);
-
-      try {
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: amount,
-          currency: "usd",
-          payment_method_types: ["card"],
-        });
-        res.send({
-          clientSecret: paymentIntent.client_secret,
-        });
-      } catch (error) {
-        console.error("Error creating payment intent:", error);
-        res.status(500).send({ error: error.message });
-      }
-    });
-
-    // create-payment-intent
-    app.post("/create-payment-intent", async (req, res) => {
-      const price = req.body.price;
-      const priceInCent = parseFloat(price) * 100;
-      console.log("priceInCent", priceInCent);
-      if (!price || priceInCent < 1) return;
-      // generate clientSecret
-      const { client_secret } = await stripe.paymentIntents.create({
-        amount: priceInCent,
-        currency: "usd",
-        automatic_payment_methods: {
-          enabled: true,
-        },
-      });
-      // send client secret as response
-      res.send({ clientSecret: client_secret });
-    });
 
     // payment related api
     app.post("/payments", async (req, res) => {
@@ -108,25 +76,12 @@ async function run() {
         expiresIn: "365d",
       });
       res.send({ token });
-
-      // .cookie("token", token, {
-      //   httpOnly: true,
-      //   secure: process.env.NODE_ENV === "production",
-      //   sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-      // })
-      // .send({ success: true });
     });
 
-    // Logout
+    // Logout (Not necessary without cookies, but kept for any future use)
     app.get("/logout", async (req, res) => {
       try {
-        res
-          .clearCookie("token", {
-            maxAge: 0,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-          })
-          .send({ success: true });
+        res.send({ success: true });
         console.log("Logout successful");
       } catch (err) {
         res.status(500).send(err);
@@ -135,66 +90,25 @@ async function run() {
 
     // verify admin middleware
     const verifyAdmin = async (req, res, next) => {
-      console.log("hello");
       const user = req.user;
       const query = { email: user?.email };
       const result = await usersCollection.findOne(query);
-      console.log(result.role);
       if (!result || result.role !== "admin") {
         return res.status(401).send({ message: "unauthorized access!!" });
       }
       next();
     };
+
     // verify deliveryman middleware
     const verifyDeliveryman = async (req, res, next) => {
-      console.log("hello");
       const user = req.user;
       const query = { email: user?.email };
       const result = await usersCollection.findOne(query);
-      console.log(result.role);
       if (!result || result.role !== "deliveryman") {
         return res.status(401).send({ message: "forbidden access" });
       }
       next();
     };
-
-    // Endpoint to fetch top delivery men
-    // app.get("/deliverymen", async (req, res) => {
-    //   try {
-    //     const deliveryCollection = db.collection("users"); // Assuming delivery men are stored in the "users" collection
-
-    //     // Fetch users with role "deliveryman" from the database
-    //     const deliveryMen = await deliveryCollection.find({ role: "deliveryman" }).toArray();
-
-    //     // Calculate the number of parcels delivered and average ratings for each delivery man
-    //     const deliveryMenData = await Promise.all(
-    //       deliveryMen.map(async (deliveryMan) => {
-    //         const { _id, name } = deliveryMan;
-    //         const parcelCount = await bookParcelCollection.countDocuments({ deliveryManID: _id });
-    //         const reviews = await reviewCollection.find({ deliveryManID: _id }).toArray();
-    //         const totalRating = reviews.reduce((acc, review) => acc + review.rating, 0);
-    //         const averageRating = reviews.length > 0 ? totalRating / reviews.length : 0;
-    //         return { _id, name, parcelCount, averageRating };
-    //       })
-    //     );
-
-    //     // Sort delivery men by the number of parcels delivered and average ratings
-    //     const topDeliveryMen = deliveryMenData
-    //       .sort((a, b) => {
-    //         if (a.parcelCount !== b.parcelCount) {
-    //           return b.parcelCount - a.parcelCount;
-    //         }
-    //         return b.averageRating - a.averageRating;
-    //       })
-    //       .slice(0, 3); // Get the top 3 delivery men
-
-    //     // Send the top delivery men data as response
-    //     res.json(topDeliveryMen);
-    //   } catch (error) {
-    //     console.error("Error fetching top delivery men:", error);
-    //     res.status(500).json({ error: "Internal Server Error" });
-    //   }
-    // });
 
     // save all user data in db
     app.put("/user", async (req, res) => {
@@ -216,7 +130,7 @@ async function run() {
         }
       }
 
-      // save user for  first time
+      // save user for first time
       const options = { upsert: true };
       const updateDoc = {
         $set: {
@@ -358,89 +272,45 @@ async function run() {
       }
     });
 
-    // save review data in db
-    app.post("/reviews", async (req, res) => {
-      const reviewData = req.body;
-      const result = await reviewCollection.insertOne(reviewData);
+    // delivery man all assigned parcel
+    app.get("/assignedParcels/:email", async (req, res) => {
+      const email = req.params.email;
+      const deliveryMan = await usersCollection.findOne({ email });
+      if (!deliveryMan || deliveryMan.role !== "deliveryman") {
+        return res.status(404).send({ message: "deliveryman not found" });
+      }
+
+      const query = {
+        deliveryManID: deliveryMan._id,
+        status: "On The Way",
+      };
+      const result = await bookParcelCollection.find(query).toArray();
       res.send(result);
     });
 
-    // get all review
+    // Add a review
+    app.post("/reviews", async (req, res) => {
+      const review = req.body;
+      const result = await reviewCollection.insertOne(review);
+      res.send(result);
+    });
+
+    // Get all reviews
     app.get("/reviews", async (req, res) => {
       const result = await reviewCollection.find().toArray();
       res.send(result);
     });
 
-    // app.get("/reviews", async (req, res) => {
-    //   const deliveryManID = req.query.deliveryManID;
-    //   console.log("deliverymanId", deliveryManID);
-
-    //   if (!deliveryManID) {
-    //     return res.status(400).send({ error: "DeliveryManID is required" });
-    //   }
-
-    //   try {
-    //     const reviews = await reviewCollection.find({ deliveryManID }).toArray();
-    //     res.send(reviews);
-    //   } catch (error) {
-    //     res.status(500).send({ error: "An error occurred while fetching reviews" });
-    //   }
-    // });
-
-    // delete booking upon canceling the booking
-    app.delete("/cancelParcel/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await bookParcelCollection.deleteOne(query);
-      res.send(result);
-    });
-
-    // get data of single id before update
-    app.get("/getUpdate/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await bookParcelCollection.findOne(query);
-      res.send(result);
-    });
-
-    // update a booking data
-    app.patch("/getUpdate/:id", async (req, res) => {
-      const id = req.params.id;
-      const parcelData = req.body;
-      const query = { _id: new ObjectId(id) };
-      const updateDoc = {
-        $set: parcelData,
-      };
-      const result = await bookParcelCollection.updateOne(query, updateDoc);
-      res.send(result);
-    });
-
-    app.patch("/getUpdateStatus/:id", async (req, res) => {
-      try {
-        const id = req.params.id;
-        const query = { _id: new ObjectId(id) };
-        const updateDoc = {
-          $set: { price: "paid" }, // Update the price field to "paid"
-        };
-        const result = await bookParcelCollection.updateOne(query, updateDoc);
-        res.send(result);
-      } catch (error) {
-        console.error("Error updating booking data:", error);
-        res.status(500).send("Internal Server Error");
-      }
-    });
-
-    await client.db("admin").command({ ping: 1 });
+    await client.connect();
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
   } finally {
+    // await client.close();
   }
 }
 run().catch(console.dir);
 
-app.get("/", (req, res) => {
-  res.send("Hello from TrackNShip.....!!!");
+app.listen(port, () => {
+  console.log(`track-n-ship app listening on port ${port}`);
 });
-
-app.listen(port, () => console.log(`Server running on port ${port}`));
