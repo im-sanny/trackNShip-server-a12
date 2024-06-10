@@ -5,6 +5,7 @@ const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const port = process.env.PORT || 8000;
 
@@ -52,6 +53,53 @@ async function run() {
     const usersCollection = db.collection("users");
     // const deliveryCollection = db.collection("deliveryDB");
     const reviewCollection = db.collection("reviews");
+    const paymentCollection = db.collection("payments");
+
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      console.log("Amount in cents:", amount);
+
+      try {
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amount,
+          currency: "usd",
+          payment_method_types: ["card"],
+        });
+        res.send({
+          clientSecret: paymentIntent.client_secret,
+        });
+      } catch (error) {
+        console.error("Error creating payment intent:", error);
+        res.status(500).send({ error: error.message });
+      }
+    });
+
+    // create-payment-intent
+    app.post("/create-payment-intent", async (req, res) => {
+      const price = req.body.price;
+      const priceInCent = parseFloat(price) * 100;
+      console.log("priceInCent", priceInCent);
+      if (!price || priceInCent < 1) return;
+      // generate clientSecret
+      const { client_secret } = await stripe.paymentIntents.create({
+        amount: priceInCent,
+        currency: "usd",
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      });
+      // send client secret as response
+      res.send({ clientSecret: client_secret });
+    });
+
+    // payment related api
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const paymentResult = await paymentCollection.insertOne(payment);
+      console.log("payment info", payment);
+      res.send(paymentResult);
+    });
 
     // auth related api
     app.post("/jwt", async (req, res) => {
@@ -365,6 +413,21 @@ async function run() {
       };
       const result = await bookParcelCollection.updateOne(query, updateDoc);
       res.send(result);
+    });
+
+    app.patch("/getUpdateStatus/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: { price: "paid" }, // Update the price field to "paid"
+        };
+        const result = await bookParcelCollection.updateOne(query, updateDoc);
+        res.send(result);
+      } catch (error) {
+        console.error("Error updating booking data:", error);
+        res.status(500).send("Internal Server Error");
+      }
     });
 
     await client.db("admin").command({ ping: 1 });
